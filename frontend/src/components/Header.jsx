@@ -8,7 +8,7 @@ export default function Header({ search, onSearchChange, onNewClaim, pendingCoun
         <h1>Expense claims</h1>
         <p className="page-subtitle">
           {formatLongDate(new Date())}
-          {pendingCount > 0 && <span> · {pendingCount} awaiting review</span>}
+          {pendingCount > 0 && <span> · {pendingCount} waiting for approval</span>}
         </p>
       </div>
 
