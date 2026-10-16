@@ -6,8 +6,9 @@ function formatValidationIssue({ loc, msg }) {
 function readErrorMessage(body, status) {
   const detail = body?.detail;
   if (typeof detail === 'string') return detail;
-  if (Array.isArray(detail) && detail.length > 0)
+  if (Array.isArray(detail) && detail.length > 0) {
     return detail.map(formatValidationIssue).join('; ');
+  }
   return `Request failed (HTTP ${status})`;
 }
 
