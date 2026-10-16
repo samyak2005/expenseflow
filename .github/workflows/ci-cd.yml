@@ -116,3 +116,49 @@ jobs:
           echo "### Images pushed" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`$BACKEND_IMAGE:${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`$FRONTEND_IMAGE:${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
+
+  # Set the repo variable DEPLOY_ENABLED=true only while the EKS cluster exists.
+  deploy:
+    name: Deploy to EKS with Helm
+    needs: build-scan-push
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'expenseflow-eks' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase image names (GHCR requires it)
+        run: |
+          echo "BACKEND_IMAGE=${BACKEND_IMAGE,,}" >> "$GITHUB_ENV"
+          echo "FRONTEND_IMAGE=${FRONTEND_IMAGE,,}" >> "$GITHUB_ENV"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: azure/setup-helm@v4
+
+      - name: Point kubectl at the EKS cluster
+        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install expenseflow ./helm/expenseflow \
+            --namespace expenseflow --create-namespace \
+            -f helm/expenseflow/values-prod.yaml \
+            --set backend.image.repository="$BACKEND_IMAGE" \
+            --set backend.image.tag=${{ github.sha }} \
+            --set frontend.image.repository="$FRONTEND_IMAGE" \
+            --set frontend.image.tag=${{ github.sha }} \
+            --wait --timeout 10m
+
+      - name: Show what is running
+        run: |
+          kubectl get pods,svc,ingress,hpa -n expenseflow
+          helm history expenseflow -n expenseflow --max 5
