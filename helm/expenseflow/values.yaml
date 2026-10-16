@@ -1,0 +1,51 @@
+backend:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_USER/expenseflow-backend
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 8000
+  resources:
+    requests: {cpu: 100m, memory: 128Mi}
+    limits: {cpu: 500m, memory: 384Mi}
+
+frontend:
+  image:
+    repository: ghcr.io/YOUR_GITHUB_USER/expenseflow-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicas: 2
+  port: 8080
+  resources:
+    requests: {cpu: 50m, memory: 64Mi}
+    limits: {cpu: 200m, memory: 128Mi}
+
+imagePullSecrets: []
+
+postgres:
+  image: postgres:16-alpine
+  database: expenseflow
+  username: expenseflow
+  # Empty means generate one on first install and reuse it on upgrades.
+  password: ""
+  storage: 2Gi
+  storageClassName: ""
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 60
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    labels:
+      release: kube-prometheus-stack
+  grafanaDashboard:
+    enabled: false

@@ -1,0 +1,96 @@
+{{- $fullname := include "expenseflow.fullname" . -}}
+{{- $secretName := printf "%s-postgres" $fullname -}}
+{{- $existing := lookup "v1" "Secret" .Release.Namespace $secretName -}}
+{{- $password := .Values.postgres.password -}}
+{{- if and (not $password) $existing -}}
+{{- $password = index $existing.data "password" | b64dec -}}
+{{- end -}}
+{{- if not $password -}}
+{{- $password = randAlphaNum 24 -}}
+{{- end -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $secretName }}
+  labels:
+    {{- include "expenseflow.labels" . | nindent 4 }}
+type: Opaque
+stringData:
+  username: {{ .Values.postgres.username | quote }}
+  password: {{ $password | quote }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "expenseflow.postgresHost" . }}
+  labels:
+    {{- include "expenseflow.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "expenseflow.selectorLabels" (dict "ctx" $ "component" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullname }}-postgres
+  labels:
+    {{- include "expenseflow.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres
+spec:
+  serviceName: {{ include "expenseflow.postgresHost" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "expenseflow.selectorLabels" (dict "ctx" $ "component" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "expenseflow.selectorLabels" (dict "ctx" $ "component" "postgres") | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.database | quote }}
+            - name: POSTGRES_USER
+              valueFrom: {secretKeyRef: {name: {{ $secretName }}, key: username}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: {{ $secretName }}, key: password}}
+            # initdb refuses a non-empty dir, and a fresh EBS volume has lost+found at its root.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: 500m, memory: 512Mi}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.postgres.storageClassName }}
+        storageClassName: {{ . }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
