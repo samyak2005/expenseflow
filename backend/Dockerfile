@@ -13,7 +13,8 @@ RUN apt-get update \
     && useradd --create-home --uid 10001 appuser
 
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# pip is only needed at build time, and Trivy flags the libraries it vendors.
+RUN pip install -r requirements.txt && pip uninstall -y pip
 
 COPY alembic.ini ./
 COPY alembic ./alembic
