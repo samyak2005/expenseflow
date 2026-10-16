@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expenseflow-broken-db
+  namespace: expenseflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: broken-db}
+  template:
+    metadata:
+      labels: {app: broken-db}
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/YOUR_GITHUB_USER/expenseflow-backend:REPLACE_WITH_SHA
+          env:
+            - name: DATABASE_URL
+              value: postgresql+psycopg://expenseflow:wrong@postgres-typo:5432/expenseflow

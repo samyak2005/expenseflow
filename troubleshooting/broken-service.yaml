@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: expenseflow-broken-service
+  namespace: expenseflow
+spec:
+  selector:
+    app.kubernetes.io/component: api
+  ports:
+    - port: 8000
+      targetPort: 8000

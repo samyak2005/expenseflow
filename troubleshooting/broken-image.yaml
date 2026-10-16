@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: expenseflow-broken-image
+  namespace: expenseflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: broken-image}
+  template:
+    metadata:
+      labels: {app: broken-image}
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/expenseflow-demo/expenseflow-backend:does-not-exist
