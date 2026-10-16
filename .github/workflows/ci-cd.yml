@@ -17,9 +17,12 @@ env:
   FRONTEND_IMAGE: ghcr.io/${{ github.repository_owner }}/expenseflow-frontend
 
 jobs:
-  test:
-    name: Test (pytest + lint + frontend build)
+  backend:
+    name: Backend - lint and test
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -29,17 +32,22 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements*.txt
 
-      - name: Install backend dependencies
-        working-directory: backend
-        run: pip install -r requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
 
-      - name: Lint backend (ruff)
-        working-directory: backend
+      - name: Lint
         run: ruff check . && ruff format --check .
 
-      - name: Run backend tests (fails the pipeline on any failure)
-        working-directory: backend
+      - name: Test
         run: pytest -v
+
+  frontend:
+    name: Frontend - test and build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
@@ -47,13 +55,42 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Build frontend
-        working-directory: frontend
-        run: npm ci && npm run build
+      - run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  infra:
+    name: Infrastructure - Terraform and Helm checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: terraform fmt
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: terraform validate
+        run: |
+          terraform -chdir=terraform init -backend=false -input=false
+          terraform -chdir=terraform validate
+
+      - uses: azure/setup-helm@v4
+
+      - name: helm lint
+        run: |
+          helm lint helm/expenseflow -f helm/expenseflow/values-prod.yaml \
+            --set backend.image.tag=ci --set frontend.image.tag=ci
+          helm template expenseflow helm/expenseflow -f helm/expenseflow/values-prod.yaml \
+            --set backend.image.tag=ci --set frontend.image.tag=ci > /dev/null
 
   build-scan-push:
     name: Build, scan (Trivy) and push images
-    needs: test
+    needs: [backend, frontend, infra]
     runs-on: ubuntu-latest
     permissions:
       contents: read
