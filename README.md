@@ -1,5 +1,11 @@
 # ExpenseFlow
 
+[![CI/CD](https://github.com/YOUR_GITHUB_USER/expenseflow/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/YOUR_GITHUB_USER/expenseflow/actions/workflows/ci-cd.yml)
+![Python](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)
+![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
+![Terraform](https://img.shields.io/badge/terraform-EKS-7B42BC?logo=terraform&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 ExpenseFlow is a small internal tool for handling office expense claims. An employee submits a
 claim (a client dinner, a cab to the airport, a software licence), a manager approves or
 rejects it, and finance marks approved claims as reimbursed. The dashboard shows how much money
@@ -17,7 +23,7 @@ is in how it gets from a commit to a monitored Kubernetes cluster on AWS.
 | Frontend | React 19, Vite, plain CSS, served by unprivileged nginx |
 | Backend | FastAPI, SQLAlchemy 2, Alembic, Pydantic |
 | Database | PostgreSQL 16 |
-| Tests | pytest (SQLite in-memory test database), ruff |
+| Quality | pytest, Vitest, ruff, Prettier, pre-commit |
 | Containers | Docker, Docker Compose |
 | CI/CD | GitHub Actions, Trivy, GitHub Container Registry |
 | Infrastructure | Terraform, AWS VPC, Amazon EKS |
@@ -46,7 +52,7 @@ is in how it gets from a commit to a monitored Kubernetes cluster on AWS.
 You need Docker.
 
 ```bash
-docker compose up --build
+docker compose up --build      # or: make up
 ```
 
 - App: http://localhost:3000
@@ -100,23 +106,47 @@ PENDING ──► APPROVED ──► REIMBURSED
 Anything else returns `409 Conflict`. Approved and reimbursed claims can't be edited or deleted,
 since they are part of the audit trail.
 
+## Backend design
+
+```
+app/
+  api/routes/   thin FastAPI handlers: parse the request, call a service, return a schema
+  services/     business rules (status transitions, edit/delete locks, stats); no HTTP here
+  models/       SQLAlchemy models and the status/category/department enums
+  schemas/      Pydantic request and response models with validation
+  core/         settings, JSON logging, request-id middleware, error handlers, metrics
+  db/           engine and session dependency
+```
+
+Services raise domain errors (`ClaimNotFoundError`, `ClaimStateError`) and `core/errors.py`
+maps them to 404 and 409, so the business logic never deals with HTTP status codes.
+Every response carries an `X-Request-ID` header (passed through if the caller sent one), and
+each request is logged as one JSON line with its id, status and duration. The list endpoint is
+paginated with `limit`/`offset` and returns the total in `X-Total-Count`.
+
 ## Tests
 
 ```bash
-cd backend
-pytest -v
+make test
 ```
 
-18 tests cover validation, filtering and search, the approval workflow, the stats endpoint,
-health checks and the metrics output. Each test gets its own in-memory SQLite database through a
-FastAPI dependency override (`tests/conftest.py`), so the suite never touches PostgreSQL.
+- **Backend (29 tests)**: service-layer unit tests for every status transition, plus API tests
+  for validation, filtering, search, pagination, the stats endpoint, health checks, request ids
+  and the metrics output. Each test gets a fresh in-memory SQLite database through a FastAPI
+  dependency override (`tests/conftest.py`), so the suite never touches PostgreSQL.
+- **Frontend (27 tests)**: Vitest tests for money/date formatting and the API client's
+  error handling.
+
+`make lint` runs ruff, Prettier, `terraform fmt` and `helm lint`. The same checks run as
+pre-commit hooks (`pre-commit install`).
 
 ## CI/CD
 
 `.github/workflows/ci-cd.yml` runs on every push and pull request to `main`:
 
-1. **test**: ruff, pytest, then the frontend production build. A failing test stops the pipeline
-   before any image is built.
+1. **backend**, **frontend** and **infra** run in parallel: ruff and pytest; Vitest and the
+   production build; `terraform fmt`/`validate` and `helm lint`. Any failure stops the pipeline
+   before an image is built.
 2. **build-scan-push**: builds both images, scans them with Trivy, and pushes them to GHCR
    tagged with the commit SHA (`ghcr.io/<owner>/expenseflow-backend:<sha>`). Pull requests are
    built and scanned but not pushed.
@@ -162,6 +192,7 @@ The Helm chart in `helm/expenseflow` deploys:
   install and stored in a Secret, so no password is committed
 - an Ingress that sends `/api` and `/docs` to the backend and everything else to the frontend
 - an HPA that scales the backend between 2 and 5 pods at 60% CPU
+- PodDisruptionBudgets so node maintenance never takes every pod of a service down at once
 - a ServiceMonitor and a Grafana dashboard ConfigMap (prod values)
 
 The backend has separate probes: `/health` for liveness, `/ready` for readiness (checks the
@@ -194,6 +225,18 @@ cd terraform && terraform destroy
 
 Uninstall ingress-nginx before `terraform destroy`. The load balancer it created isn't managed
 by Terraform, and if it's still there the VPC can't be deleted.
+
+## Common commands
+
+```bash
+make help        # list everything
+make up          # docker compose stack
+make test        # backend + frontend tests
+make lint        # all linters
+make tf-plan     # terraform plan
+make addons      # ingress, metrics-server, Prometheus/Grafana
+make deploy OWNER=<github-user> TAG=<sha>
+```
 
 ## Project layout
 
