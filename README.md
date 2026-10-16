@@ -223,6 +223,27 @@ p95 latency, backend pod count, CPU per pod, and claims submitted per category. 
 Service selecting no pods, wrong database URL), each with the symptom, the commands that find
 the cause, and the fix.
 
+## Evidence
+
+Screenshots from the running system, in `docs/screenshots/`, plus a recording of a commit going
+from `git push` through the pipeline to the cluster.
+
+| Rubric area | Screenshot |
+|---|---|
+| Tests | [pytest: 29 passed](docs/screenshots/01-pytest.png) |
+| Docker | [docker compose up --build](docs/screenshots/02-compose-up.png), [app on localhost:3000](docs/screenshots/03-app-localhost.png), [Swagger](docs/screenshots/04-swagger.png) |
+| Git | [commit history](docs/screenshots/05-commits.png) |
+| CI/CD | [green pipeline](docs/screenshots/06-pipeline-green.png), [GHCR packages](docs/screenshots/08-ghcr-packages.png), [SHA-tagged images](docs/screenshots/09-ghcr-sha-tags.png) |
+| Security | [Trivy scans](docs/screenshots/07-trivy.png) |
+| Terraform | [init, validate, fmt](docs/screenshots/16-terraform-validate.png) |
+| Kubernetes + Helm | [pods, services, helm list](docs/screenshots/13-kubectl-pods-svc-helm.png), [app through the Ingress](docs/screenshots/14-app-ingress.png), [HPA scaling 2 to 5 pods](docs/screenshots/10-hpa-scaling.png) |
+| Monitoring | [/metrics](docs/screenshots/15-metrics.png), [Prometheus targets UP](docs/screenshots/12-prometheus-targets.png), [Grafana dashboard](docs/screenshots/11-grafana.png) |
+| Troubleshooting | [Service with no endpoints, then fixed](docs/screenshots/17-troubleshooting.png) |
+
+**Demo video**: [commit to deployment, 4 minutes](docs/video/demo-commit-to-deploy.mp4). A
+one-line UI change is committed and pushed, the pipeline tests, builds, scans and pushes the
+images, and `make local-deploy` rolls the new SHA out to the cluster.
+
 ## Cleaning up
 
 ```bash
