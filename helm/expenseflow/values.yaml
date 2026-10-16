@@ -36,6 +36,9 @@ ingress:
   className: nginx
   host: ""
 
+podDisruptionBudget:
+  enabled: true
+
 hpa:
   enabled: true
   minReplicas: 2

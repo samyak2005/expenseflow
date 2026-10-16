@@ -4,5 +4,7 @@ frontend:
   replicas: 1
 hpa:
   enabled: false
+podDisruptionBudget:
+  enabled: false
 ingress:
   enabled: false
