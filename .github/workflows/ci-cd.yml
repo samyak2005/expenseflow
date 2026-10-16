@@ -79,7 +79,7 @@ jobs:
           terraform -chdir=terraform init -backend=false -input=false
           terraform -chdir=terraform validate
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       - name: helm lint
         run: |
@@ -179,7 +179,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       - name: Point kubectl at the EKS cluster
         run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
