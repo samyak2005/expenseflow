@@ -40,7 +40,7 @@ def test_expense_date_cannot_be_in_the_future(client):
     assert "future" in response.text
 
 
-def test_unknown_category_is_rejected(client, make_claim):
+def test_unknown_category_is_rejected(client):
     response = client.post(
         "/api/claims",
         json={
@@ -152,3 +152,17 @@ def test_stats_add_up(client, make_claim):
     assert stats["approved_amount"] == 2000
     assert stats["rejected_count"] == 1
     assert [c["category"] for c in stats["by_category"]] == ["SOFTWARE", "TRAVEL"]
+
+
+def test_list_is_paginated_with_total_header(client, make_claim):
+    for i in range(3):
+        make_claim(title=f"Claim number {i}")
+
+    response = client.get("/api/claims", params={"limit": 2})
+
+    assert response.headers["X-Total-Count"] == "3"
+    assert len(response.json()) == 2
+
+
+def test_limit_is_capped(client):
+    assert client.get("/api/claims", params={"limit": 10_000}).status_code == 422

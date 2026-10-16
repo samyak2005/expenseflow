@@ -4,9 +4,7 @@ from typing import Annotated, Literal
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
-Department = Literal["ENGINEERING", "SALES", "MARKETING", "HR", "FINANCE", "OPERATIONS"]
-Category = Literal["TRAVEL", "MEALS", "SOFTWARE", "EQUIPMENT", "TRAINING", "OTHER"]
-Status = Literal["PENDING", "APPROVED", "REJECTED", "REIMBURSED"]
+from app.models.enums import Category, ClaimStatus, Department
 
 
 def check_not_future(value: date) -> date:
@@ -41,14 +39,23 @@ class ClaimUpdate(BaseModel):
 
 
 class StatusChange(BaseModel):
-    status: Literal["APPROVED", "REJECTED", "REIMBURSED"]
+    status: Literal[ClaimStatus.APPROVED, ClaimStatus.REJECTED, ClaimStatus.REIMBURSED]
     reviewer_comment: str = Field(default="", max_length=500)
 
     @model_validator(mode="after")
     def rejection_needs_reason(self) -> "StatusChange":
-        if self.status == "REJECTED" and len(self.reviewer_comment.strip()) < 3:
+        if self.status == ClaimStatus.REJECTED and len(self.reviewer_comment.strip()) < 3:
             raise ValueError("a rejection needs a reviewer_comment explaining why")
         return self
+
+
+class ClaimFilters(BaseModel):
+    status: ClaimStatus | None = None
+    category: Category | None = None
+    department: Department | None = None
+    q: str | None = Field(default=None, max_length=100)
+    limit: int = Field(default=100, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)
 
 
 class ClaimOut(BaseModel):
@@ -62,7 +69,7 @@ class ClaimOut(BaseModel):
     category: Category
     amount: float
     expense_date: date
-    status: Status
+    status: ClaimStatus
     reviewer_comment: str
     created_at: datetime
     updated_at: datetime
@@ -74,7 +81,7 @@ class CategoryStat(BaseModel):
     amount: float
 
 
-class StatsOut(BaseModel):
+class ClaimStats(BaseModel):
     total_claims: int
     pending_count: int
     approved_count: int
