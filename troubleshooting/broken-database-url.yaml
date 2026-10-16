@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: backend
-          image: ghcr.io/YOUR_GITHUB_USER/expenseflow-backend:REPLACE_WITH_SHA
+          image: ghcr.io/samyak2005/expenseflow-backend:REPLACE_WITH_SHA
           env:
             - name: DATABASE_URL
               value: postgresql+psycopg://expenseflow:wrong@postgres-typo:5432/expenseflow

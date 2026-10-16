@@ -71,7 +71,7 @@ kubectl delete -f troubleshooting/broken-service.yaml
 
 ## Lab 3 - `CrashLoopBackOff` (bad database URL)
 
-Edit the image line in `broken-database-url.yaml` to a real backend image first.
+Set the image tag in `broken-database-url.yaml` to a commit SHA that exists in GHCR first.
 
 ```bash
 kubectl apply -f troubleshooting/broken-database-url.yaml

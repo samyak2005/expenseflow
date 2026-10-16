@@ -69,7 +69,7 @@ with the commit SHA as the image tag.
 ### By hand
 
 ```bash
-OWNER=your-github-username
+OWNER=samyak2005
 SHA=$(git rev-parse HEAD)
 
 helm upgrade --install expenseflow ./helm/expenseflow \

@@ -1,6 +1,6 @@
 # ExpenseFlow
 
-[![CI/CD](https://github.com/YOUR_GITHUB_USER/expenseflow/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/YOUR_GITHUB_USER/expenseflow/actions/workflows/ci-cd.yml)
+[![CI/CD](https://github.com/samyak2005/expenseflow/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/samyak2005/expenseflow/actions/workflows/ci-cd.yml)
 ![Python](https://img.shields.io/badge/python-3.13-3776AB?logo=python&logoColor=white)
 ![React](https://img.shields.io/badge/react-19-61DAFB?logo=react&logoColor=black)
 ![Terraform](https://img.shields.io/badge/terraform-EKS-7B42BC?logo=terraform&logoColor=white)
