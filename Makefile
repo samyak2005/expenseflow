@@ -5,7 +5,7 @@ FRONTEND := frontend
 CHART    := helm/expenseflow
 TAG      ?= $(shell git rev-parse --short HEAD)
 
-.PHONY: help install lint format test up down logs build tf-init tf-plan tf-apply tf-destroy helm-lint addons deploy load-test
+.PHONY: help install lint format test up down logs build tf-init tf-plan tf-apply tf-destroy helm-lint addons deploy load-test local-up local-deploy local-down
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -74,3 +74,12 @@ deploy: ## Deploy a commit to the current cluster: make deploy OWNER=<github-use
 
 load-test: ## Generate load so the HPA scales the backend
 	./scripts/load-test.sh
+
+local-up: ## Create a local kind cluster with add-ons and deploy the latest CI image
+	./scripts/local-cluster.sh up
+
+local-deploy: ## Deploy the newest image CI has pushed to the local cluster
+	./scripts/local-cluster.sh deploy
+
+local-down: ## Delete the local kind cluster
+	./scripts/local-cluster.sh down

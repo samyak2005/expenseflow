@@ -185,7 +185,16 @@ is in [docs/deployment.md](docs/deployment.md).
 
 ## Kubernetes
 
-The Helm chart in `helm/expenseflow` deploys:
+The same Helm chart runs in two places:
+
+- **Local (kind)**: `make local-up` creates a three-node kind cluster, installs ingress-nginx,
+  metrics-server and kube-prometheus-stack, and deploys the images CI pushed to GHCR. The app is
+  served through the Ingress at http://expenseflow.localtest.me, Grafana at
+  http://grafana.localtest.me and Prometheus at http://prometheus.localtest.me (`localtest.me`
+  resolves to 127.0.0.1). After a green pipeline, `make local-deploy` rolls out the new commit.
+- **AWS (EKS)**: the cluster from `terraform/`, deployed by the pipeline's deploy job.
+
+The chart deploys:
 
 - frontend and backend Deployments (2 replicas each) with ClusterIP Services
 - PostgreSQL as a StatefulSet with a persistent volume; its password is generated on the first

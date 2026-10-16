@@ -1,0 +1,17 @@
+backend:
+  replicas: 2
+frontend:
+  replicas: 2
+ingress:
+  enabled: true
+  className: nginx
+  host: expenseflow.localtest.me
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+monitoring:
+  serviceMonitor:
+    enabled: true
+  grafanaDashboard:
+    enabled: true
